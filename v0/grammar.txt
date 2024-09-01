@@ -1,0 +1,4 @@
+<program>         = <statement>       [ <statement> ... ]
+<statement>       = <print_statement> "\n"
+<print_statement> = "print"           <expression>
+<expression>      = number
