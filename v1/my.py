@@ -1,3 +1,5 @@
+import sys
+
 class Error(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -9,6 +11,7 @@ class My:
         self.col_num = 0
         self.token_feed = self.tokens()
         self.returned_token = None
+        self.stack = []
     
     def raise_error(self, message):
         raise Error(f"[{self.line_num},{self.col_num-1}]: {message}")
@@ -67,11 +70,14 @@ class My:
     
     def parse_print_statement(self):
         token = self.next_token()
-        if token[0] != 'print':
+        if token != ('print',):
             self.return_token(token)
             return False
         if not self.parse_expression():
-            self.raise_error('Expected: expression')
+            self.raise_error('Expected expression')
+
+        value = self.stack_pop()
+        print(value)
         return True
 
     def parse_expression(self):
@@ -79,6 +85,8 @@ class My:
         if token[0] != 'number':
             self.return_token(token)
             return False
+
+        self.stack_push(token[1])
         return True
     
     def run(self):
@@ -87,3 +95,15 @@ class My:
         except ValueError as exc:
             print(str(exc))
             return False
+
+    def stack_push(self, arg):
+        self.stack.append(arg)
+
+    def stack_pop(self):
+        return self.stack.pop()
+
+if __name__ == '__main__':
+    with open(sys.argv[1], 'rt') as f:
+        code = f.read()
+    program = My(code)
+    program.run()
