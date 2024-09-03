@@ -40,7 +40,7 @@ class My:
             for token in line.strip().split(" "):
                 for _ in token:
                     self.col_num += 1
-                if token in ["print", "="]:
+                if token in ["print", "=", "+", "-", "*", "/"]:
                     yield (token,)
                 elif token.isnumeric():
                     yield ("number", int(token))
@@ -71,15 +71,15 @@ class My:
     
     def parse_print_statement(self):
         token = self.next_token()
-        if token != ('print',):
+        if token[0] != 'print':
             self.return_token(token)
             return False
         if not self.parse_expression():
-            self.raise_error('Expected expression')
-        value = self.stack_pop()
+            self.raise_error('Expected: expression')
+        value = self.stack_collapse()
         print(value)
         return True
-    
+
     def parse_assignment(self):
         token = self.next_token()
         if token[0] != 'identifier':
@@ -91,22 +91,61 @@ class My:
             self.raise_error('Expected: =')
         if not self.parse_expression():
             self.raise_error('Expected: expression')
-        self.vars[identifier] = self.stack_pop()
+
+        self.vars[identifier] = self.stack_collapse()
         return True
 
     def parse_expression(self):
+        if not self.parse_value():
+            return False
+        if self.parse_operator():
+            self.parse_expression()
+        return True
+    
+    def parse_value(self):
         token = self.next_token()
-        if token[0] not in ["number", "identifier"]:
+        if token[0] not in ['number', 'identifier']:
             self.return_token(token)
             return False
         if token[0] == 'identifier':
             if token[1] not in self.vars:
-                self.raise_error(f"Syntax Error: Unknown variable '{token[1]}'")
+                self.raise_error(f'Unknown variable {token[1]}')
             else:
                 self.stack_push(self.vars[token[1]])
         else:
             self.stack_push(token[1])
         return True
+    
+    def parse_operator(self):
+        token = self.next_token()
+        if token[0] not in ['+', '-', '*', '/']:
+            self.return_token(token)
+            return False
+        self.stack_push(self.stack_collapse())
+        self.stack_push(token[0])
+        return True
+
+    
+    def stack_push(self, arg):
+        self.stack.append(arg)
+
+    def stack_pop(self):
+        return self.stack.pop()
+    
+    def stack_collapse(self):
+        while len(self.stack) > 1:
+            value2 = self.stack_pop()
+            prev_op = self.stack_pop()
+            value1 = self.stack_pop()
+            if prev_op == '+':
+                self.stack_push(value1 + value2)
+            elif prev_op == '-':
+                self.stack_push(value1 - value2)
+            elif prev_op == '*':
+                self.stack_push(value1 * value2)
+            elif prev_op == '/':
+                self.stack_push(value1 / value2)
+        return self.stack.pop()
     
     def run(self):
         try:
@@ -115,11 +154,6 @@ class My:
             print(str(exc))
             return False
 
-    def stack_push(self, arg):
-        self.stack.append(arg)
-
-    def stack_pop(self):
-        return self.stack.pop()
 
 if __name__ == '__main__':
     with open(sys.argv[1], 'rt') as f:
