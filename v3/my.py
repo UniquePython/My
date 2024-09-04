@@ -13,6 +13,7 @@ class My:
         self.returned_token = None
         self.stack = []
         self.vars = {}
+        self.precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
     
     def raise_error(self, message):
         raise Error(f"[{self.line_num},{self.col_num-1}]: {message}")
@@ -121,10 +122,9 @@ class My:
         if token[0] not in ['+', '-', '*', '/']:
             self.return_token(token)
             return False
-        self.stack_push(self.stack_collapse())
-        self.stack_push(token[0])
+        self.stack_push(self.stack_collapse(next_operator=token[0]))
+        self.stack_push((token[0], self.precedence[token[0]]))
         return True
-
     
     def stack_push(self, arg):
         self.stack.append(arg)
@@ -132,10 +132,12 @@ class My:
     def stack_pop(self):
         return self.stack.pop()
     
-    def stack_collapse(self):
-        while len(self.stack) > 1:
+    def stack_collapse(self, next_operator=None):
+        op_precedence = 0 if next_operator is None else \
+            self.precedence[next_operator]
+        while len(self.stack) > 1 and self.stack[-2][1] > op_precedence:
             value2 = self.stack_pop()
-            prev_op = self.stack_pop()
+            prev_op = self.stack_pop()[0]
             value1 = self.stack_pop()
             if prev_op == '+':
                 self.stack_push(value1 + value2)
